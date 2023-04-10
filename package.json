@@ -1,0 +1,32 @@
+{
+  "name": "pirate-movie-bot",
+  "version": "1.0.0",
+  "description": "Search a movie and send direct links for download",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node ./build/bot.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soroush-habibi/pirate-movie-bot.git"
+  },
+  "keywords": [
+    "Node.js",
+    "typescript",
+    "bot",
+    "telegram",
+    "scraper-bot",
+    "grammy"
+  ],
+  "author": "Soroush Habibi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/soroush-habibi/pirate-movie-bot/issues"
+  },
+  "homepage": "https://github.com/soroush-habibi/pirate-movie-bot#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "grammy": "^1.15.3",
+    "prisma": "^4.12.0"
+  }
+}
