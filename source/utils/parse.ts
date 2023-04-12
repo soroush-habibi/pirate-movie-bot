@@ -8,7 +8,8 @@ interface site {
 
 interface links {
     label: string,
-    urls: string[]
+    urls: string[],
+    season?: string
 }
 
 export default class parse {
@@ -32,19 +33,19 @@ export default class parse {
                 }
             }
 
-            const serMovieSearch = await axios.get(`https://www.sermovie5.online/search?text=${name}`, {
-                insecureHTTPParser: true
-            });
-            const serMovieData: string = await serMovieSearch.data;
+            // const serMovieSearch = await axios.get(`https://www.sermovie5.online/search?text=${name}`, {
+            //     insecureHTTPParser: true
+            // });
+            // const serMovieData: string = await serMovieSearch.data;
 
-            const link2 = dom.parse(serMovieData).querySelector(".playlist-item")?.querySelector(".text-container")?.querySelector("a")?.getAttribute("href");
+            // const link2 = dom.parse(serMovieData).querySelector(".playlist-item")?.querySelector(".text-container")?.querySelector("a")?.getAttribute("href");
 
-            if (link2) {
-                result.push({
-                    name: "sermovie",
-                    url: "https://www.sermovie5.online" + link2
-                });
-            }
+            // if (link2) {
+            //     result.push({
+            //         name: "sermovie",
+            //         url: "https://www.sermovie5.online" + link2
+            //     });
+            // }
         } catch (e) {
             console.log(e);
         }
@@ -60,10 +61,52 @@ export default class parse {
                 const digi = await axios.get(url);
                 const digiData = await digi.data;
 
-                let tags = dom.parse(digiData).querySelectorAll(".partlink");
-                tags = tags.concat(dom.parse(digiData).querySelectorAll(".btn_dl"));
+                let showTags = dom.parse(digiData).querySelectorAll(".partlink");
+                let movieTags = dom.parse(digiData).querySelectorAll(".btn_dl");
 
-                const links = tags.map((value) => value.getAttribute("href"));
+                const links = showTags.concat(movieTags).map((value) => value.getAttribute("href"));
+
+                movieTags.map((value) => {
+                    const parent = value.parentNode.parentNode.parentNode;
+                    const title = parent.querySelector(".side_left")?.querySelector(".head_left_side")?.querySelector("h3")?.innerHTML;
+                    const link = value.getAttribute("href");
+
+                    if (title && link) {
+                        result.push({
+                            label: title,
+                            urls: [link]
+                        });
+                    }
+                });
+
+                showTags.map((value) => {
+                    const parent = value.parentNode.parentNode.parentNode.parentNode;
+                    let title = parent.querySelector(".side_left")?.querySelector(".head_left_side")?.querySelector("h3")?.innerHTML;
+                    let season = parent.querySelector(".side_right")?.querySelector(".title_row")?.querySelector("h3")?.innerHTML;
+                    const link = value.getAttribute("href");
+
+                    if (title && season && link) {
+                        let index: number = -1;
+                        const update = result.find((value, i) => {
+                            if (value.label === title && value.season === season) {
+                                index = i;
+                                return true;
+                            }
+                        });
+
+                        if (update && index !== -1) {
+                            result.splice(index);
+                            update.urls.push(link);
+                            result.push(update);
+                        } else {
+                            result.push({
+                                label: title,
+                                urls: [link],
+                                season: season
+                            });
+                        }
+                    }
+                });
             } else if (url.includes("sermovie")) {
 
             }
