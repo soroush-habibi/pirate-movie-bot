@@ -11,26 +11,27 @@ bot.command("start", (ctx) => {
 bot.on("message:text", async (ctx) => {
     try {
         const msg = await ctx.reply("Searching...");
-        const sites = await parse.availableSites(ctx.message.text);
-        if (sites.length === 0) {
-            ctx.api.editMessageText(ctx.chat.id, msg.message_id, "Can not find movie");
-        }
-        else {
-            const digiInlineKeyboard = new grammy.InlineKeyboard();
-            let digiMessage = "digimovie:\n";
-            let digiCount = 0;
-            for (let i of sites) {
-                if (i.name === "digimovie") {
-                    digiCount++;
-                    digiMessage += String(digiCount) + " - " + i.title + "\n";
-                    digiInlineKeyboard.text(String(digiCount), "digi:" + digiCount + " - " + ctx.message.text);
+        parse.availableSites(ctx.message.text).then(async (sites) => {
+            if (sites.length === 0) {
+                ctx.api.editMessageText(ctx.chat.id, msg.message_id, "Can not find movie");
+            }
+            else {
+                const digiInlineKeyboard = new grammy.InlineKeyboard();
+                let digiMessage = "Digimovie search results:\n\n";
+                let digiCount = 0;
+                for (let i of sites) {
+                    if (i.name === "digimovie") {
+                        digiCount++;
+                        digiMessage += String(digiCount) + " - " + i.title + "\n";
+                        digiInlineKeyboard.text(String(digiCount), "digi:" + digiCount + " - " + ctx.message.text);
+                    }
                 }
+                if (digiInlineKeyboard.inline_keyboard.length > 0) {
+                    await ctx.reply(digiMessage, { reply_markup: digiInlineKeyboard });
+                }
+                ctx.api.deleteMessage(ctx.chat.id, msg.message_id);
             }
-            if (digiInlineKeyboard.inline_keyboard.length > 0) {
-                await ctx.reply(digiMessage, { reply_markup: digiInlineKeyboard });
-            }
-            ctx.api.deleteMessage(ctx.chat.id, msg.message_id);
-        }
+        });
     }
     catch (e) {
         console.log(e);
@@ -41,48 +42,50 @@ bot.callbackQuery(/^digi:[1-5] - (.)+/, async (ctx) => {
         const waitMessage = await ctx.reply("Please wait...");
         await ctx.answerCallbackQuery();
         const number = Number(ctx.callbackQuery.data.slice(5, 6));
-        const sites = await parse.availableSites(ctx.callbackQuery.data.slice(9));
-        let url;
-        let count = 0;
-        for (let i of sites) {
-            if (i.name === "digimovie") {
-                count++;
+        parse.availableSites(ctx.callbackQuery.data.slice(9)).then(async (sites) => {
+            let url;
+            let count = 0;
+            for (let i of sites) {
+                if (i.name === "digimovie") {
+                    count++;
+                }
+                if (count === number) {
+                    url = i.url;
+                }
             }
-            if (count === number) {
-                url = i.url;
-            }
-        }
-        if (url) {
-            const links = await parse.getDownloadLinks(url);
-            if (links[0].season) {
-                const set = new Set();
-                links.map((value) => {
-                    if (value.season)
-                        set.add(value.season);
-                });
-                const inlineKeyboard = new grammy.InlineKeyboard();
-                set.forEach((i) => {
-                    const data = i + "url:" + url;
-                    inlineKeyboard.text(i, data);
-                });
-                await ctx.reply("choose a season:", { reply_markup: inlineKeyboard });
-            }
-            else {
-                links.map(async (value) => {
-                    let message = value.label + ":" + "\n";
-                    message += value.urls.join("\n\n");
-                    message += "\n";
-                    try {
-                        await ctx.reply(message);
+            if (url) {
+                await parse.getDownloadLinks(url).then(async (links) => {
+                    if (links[0].season) {
+                        const set = new Set();
+                        links.map((value) => {
+                            if (value.season)
+                                set.add(value.season);
+                        });
+                        const inlineKeyboard = new grammy.InlineKeyboard();
+                        set.forEach((i) => {
+                            const data = i + "url:" + url;
+                            inlineKeyboard.text(i, data);
+                        });
+                        await ctx.reply("choose a season:", { reply_markup: inlineKeyboard });
                     }
-                    catch (e) {
-                        console.log(e);
+                    else {
+                        links.map(async (value) => {
+                            let message = value.label + ":" + "\n";
+                            message += value.urls.join("\n\n");
+                            message += "\n";
+                            try {
+                                await ctx.reply(message);
+                            }
+                            catch (e) {
+                                console.log(e);
+                            }
+                        });
                     }
+                    if (ctx.chat)
+                        ctx.api.deleteMessage(ctx.chat.id, waitMessage.message_id);
                 });
             }
-            if (ctx.chat)
-                ctx.api.deleteMessage(ctx.chat.id, waitMessage.message_id);
-        }
+        });
     }
     catch (e) {
         console.log(e);
