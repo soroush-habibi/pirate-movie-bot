@@ -1,8 +1,10 @@
 import axios from 'axios';
 import dom from 'node-html-parser';
+import { decode } from 'html-entities';
 
 interface site {
     name: string,
+    title: string,
     url: string
 }
 
@@ -13,23 +15,36 @@ interface links {
 }
 
 export default class parse {
-    static async searchSites(name: string): Promise<site[]> {
+    static async availableSites(name: string): Promise<site[]> {
         const result: site[] = [];
 
         try {
             const digiMovieSearch = await axios.get(`https://digimovie.vip/?s=${name}`);
             const digiMovieData: string = await digiMovieSearch.data;
 
-            const link = dom.parse(digiMovieData).querySelector(".item_def_loop")?.querySelector("a")?.getAttribute("href");
+            const links = dom.parse(digiMovieData).querySelectorAll(".item_def_loop");
 
-            if (link) {
-                const { data } = await axios.get(link);
+            let count = 0;
+            for (let i of links) {
+                if (count === 5) {
+                    break;
+                }
 
-                if (!data.includes("برای دانلود")) {
-                    result.push({
-                        name: "digimovie",
-                        url: link
-                    });
+                const link = i.querySelector("a")?.getAttribute("href");
+                let title = i.querySelector(".title_meta")?.querySelector(".left_side")?.querySelector("a")?.innerHTML;
+                title = title?.slice(title?.search(/\w/));
+
+                if (link && title) {
+                    const { data } = await axios.get(link);
+
+                    if (!data.includes("برای دانلود")) {
+                        result.push({
+                            name: "digimovie",
+                            title: decode(title),
+                            url: link
+                        });
+                        count++;
+                    }
                 }
             }
 

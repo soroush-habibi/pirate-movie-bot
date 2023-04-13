@@ -11,16 +11,24 @@ bot.command("start", (ctx) => {
 bot.on("message:text", async (ctx) => {
     try {
         const msg = await ctx.reply("Searching...");
-        const sites = await parse.searchSites(ctx.message.text);
+        const sites = await parse.availableSites(ctx.message.text);
         if (sites.length === 0) {
             ctx.api.editMessageText(ctx.chat.id, msg.message_id, "Can not find movie");
         }
         else {
-            const inlineKeyboard = new grammy.InlineKeyboard();
+            const digiInlineKeyboard = new grammy.InlineKeyboard();
+            let digiMessage = "digimovie:\n";
+            let digiCount = 0;
             for (let i of sites) {
-                inlineKeyboard.text(i.name, "url:" + i.url);
+                if (i.name === "digimovie") {
+                    digiCount++;
+                    digiMessage += String(digiCount) + " - " + i.title + "\n";
+                    digiInlineKeyboard.text(String(digiCount), i.url);
+                }
             }
-            await ctx.reply("Choose a site for download:", { reply_markup: inlineKeyboard });
+            if (digiInlineKeyboard.inline_keyboard.length > 0) {
+                await ctx.reply(digiMessage, { reply_markup: digiInlineKeyboard });
+            }
             ctx.api.deleteMessage(ctx.chat.id, msg.message_id);
         }
     }
@@ -28,9 +36,9 @@ bot.on("message:text", async (ctx) => {
         console.log(e);
     }
 });
-bot.callbackQuery(/^url:(.+)/, async (ctx) => {
+bot.callbackQuery(/^http(.+)/, async (ctx) => {
     try {
-        const url = ctx.callbackQuery.data.slice(4);
+        const url = ctx.callbackQuery.data;
         const links = await parse.getDownloadLinks(url);
         if (links[0].season) {
             const set = new Set();

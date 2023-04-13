@@ -1,19 +1,31 @@
 import axios from 'axios';
 import dom from 'node-html-parser';
+import { decode } from 'html-entities';
 export default class parse {
-    static async searchSites(name) {
+    static async availableSites(name) {
         const result = [];
         try {
             const digiMovieSearch = await axios.get(`https://digimovie.vip/?s=${name}`);
             const digiMovieData = await digiMovieSearch.data;
-            const link = dom.parse(digiMovieData).querySelector(".item_def_loop")?.querySelector("a")?.getAttribute("href");
-            if (link) {
-                const { data } = await axios.get(link);
-                if (!data.includes("برای دانلود")) {
-                    result.push({
-                        name: "digimovie",
-                        url: link
-                    });
+            const links = dom.parse(digiMovieData).querySelectorAll(".item_def_loop");
+            let count = 0;
+            for (let i of links) {
+                if (count === 5) {
+                    break;
+                }
+                const link = i.querySelector("a")?.getAttribute("href");
+                let title = i.querySelector(".title_meta")?.querySelector(".left_side")?.querySelector("a")?.innerHTML;
+                title = title?.slice(title?.search(/\w/));
+                if (link && title) {
+                    const { data } = await axios.get(link);
+                    if (!data.includes("برای دانلود")) {
+                        result.push({
+                            name: "digimovie",
+                            title: decode(title),
+                            url: link
+                        });
+                        count++;
+                    }
                 }
             }
             // const serMovieSearch = await axios.get(`https://www.sermovie5.online/search?text=${name}`, {
